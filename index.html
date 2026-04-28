@@ -85,89 +85,93 @@
     </section>
 
     <button class="message green" data-text="分後に着きます">分後に着きます</button>
+    <button class="message light-green" data-text="今から出ます">今から出ます</button>
+    <button class="message light-green" data-text="もう着きます">もう着きます</button>
+    <button class="message light-green" data-text="いつもの時間です">いつもの時間です</button>
     <button class="message orange" data-text="電車が止まりました">電車が止まりました</button>
     <button class="message orange" data-text="渋滞にはまりました">渋滞にはまりました</button>
-    <button class="message light-green" data-text="もう着きます">もう着きます</button>
-    <button class="message light-green" data-text="今から出ます">今から出ます</button>
-    <button class="message light-green" data-text="いつもの時間です">いつもの時間です</button>
   </main>
 
-  <script>
-    const LIFF_ID = "2009927876-ogDef6aH";
+<script>
+  const LIFF_ID = "2009927876-ogDef6aH";
 
-    let selectedMinute = null;
-    const statusEl = document.getElementById("status");
+  let selectedMinute = null;
+  const statusEl = document.getElementById("status");
 
-    async function main() {
-      try {
-        await liff.init({ liffId: LIFF_ID });
+  async function main() {
+    try {
+      await liff.init({ liffId: LIFF_ID });
 
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+
+      statusEl.textContent = "送信準備OK";
+    } catch (error) {
+      console.error(error);
+      statusEl.textContent = "LIFFの初期化に失敗しました";
+    }
+  }
+
+  async function sendLineText(text) {
+    try {
+      setLoading(true);
+      statusEl.textContent = "送信先を選択してください";
+
+      if (!liff.isApiAvailable("shareTargetPicker")) {
+        statusEl.textContent = "この環境では送信先選択が使えません";
+        return;
+      }
+
+      const result = await liff.shareTargetPicker([
+        {
+          type: "text",
+          text
         }
+      ]);
 
-        statusEl.textContent = "送信準備OK";
-      } catch (error) {
-        console.error(error);
-        statusEl.textContent = "LIFFの初期化に失敗しました";
-      }
-    }
-
-    async function sendLineText(text) {
-      try {
-        setLoading(true);
-
-        await liff.sendMessages([
-          {
-            type: "text",
-            text
-          }
-        ]);
-
+      if (result) {
         statusEl.textContent = "送信しました";
-
-        setTimeout(() => {
-          if (liff.isInClient()) {
-            liff.closeWindow();
-          }
-        }, 500);
-
-      } catch (error) {
-        console.error(error);
-        statusEl.textContent = "送信に失敗しました";
-      } finally {
-        setLoading(false);
+      } else {
+        statusEl.textContent = "送信をキャンセルしました";
       }
+
+    } catch (error) {
+      console.error(error);
+      statusEl.textContent = "送信に失敗しました";
+    } finally {
+      setLoading(false);
     }
+  }
 
-    function setLoading(isLoading) {
-      document.querySelectorAll("button").forEach(button => {
-        button.disabled = isLoading;
-      });
-    }
-
-    document.querySelectorAll(".minute").forEach(button => {
-      button.addEventListener("click", () => {
-        selectedMinute = button.dataset.minute;
-        statusEl.textContent = `${selectedMinute}分を選択中`;
-      });
+  function setLoading(isLoading) {
+    document.querySelectorAll("button").forEach(button => {
+      button.disabled = isLoading;
     });
+  }
 
-    document.querySelectorAll(".message").forEach(button => {
-      button.addEventListener("click", () => {
-        const baseText = button.dataset.text;
-
-        const text =
-          baseText === "分後に着きます"
-            ? `${selectedMinute || 10}分後に着きます`
-            : baseText;
-
-        sendLineText(text);
-      });
+  document.querySelectorAll(".minute").forEach(button => {
+    button.addEventListener("click", () => {
+      selectedMinute = button.dataset.minute;
+      statusEl.textContent = `${selectedMinute}分を選択中`;
     });
+  });
 
-    main();
-  </script>
+  document.querySelectorAll(".message").forEach(button => {
+    button.addEventListener("click", () => {
+      const baseText = button.dataset.text;
+
+      const text =
+        baseText === "分後に着きます"
+          ? `${selectedMinute || 10}分後に着きます`
+          : baseText;
+
+      sendLineText(text);
+    });
+  });
+
+  main();
+</script>
 </body>
 </html>
